@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: a6d7ea0f-5318-4695-adec-c0c21710e310
+      url: https://pytorch-notes-lightbridge.netlify.app
