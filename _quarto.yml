@@ -12,6 +12,7 @@ book:
     - part: Basic
       chapters:
         - contents/basic/quickstart_tutorial.ipynb
+        - contents/basic/tensorqs_tutorial.ipynb
     - references.qmd
 
 format:
