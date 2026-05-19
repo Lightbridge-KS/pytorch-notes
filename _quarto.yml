@@ -1,0 +1,27 @@
+project:
+  type: book
+
+book:
+  title: "PyTorch Notes"
+  author: "Kittipos Sirivongrungson"
+  date: today
+  repo-url: https://github.com/Lightbridge-KS/pytorch-notes
+  site-url: https://pytorch-notes-lightbridge.netlify.app
+  chapters:
+    - index.qmd
+    - references.qmd
+
+format:
+  html:
+    theme:
+      light:
+      - cosmo
+      dark:
+      - darkly
+    toc-depth: 4
+
+execute:
+  freeze: auto
+  execute-dir: project
+
+freeze: auto

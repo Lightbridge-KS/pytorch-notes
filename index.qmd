@@ -1,0 +1,5 @@
+# Preface {.unnumbered}
+
+This book is a focused working notebook for PyTorch notes, examples, training workflows, cheatsheets, and summaries.
+
+Most chapters will be runnable Jupyter notebooks, added incrementally as the notes grow.

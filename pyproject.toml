@@ -1,0 +1,27 @@
+[project]
+name = "pytorch-notes"
+version = "0.1.0"
+description = "Runnable PyTorch notes for a Quarto Book."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel",
+    "matplotlib",
+    "nbformat",
+    "numpy",
+    "pandas",
+    "pillow",
+    "rich",
+    "torch",
+    "torchvision",
+    "tqdm",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
