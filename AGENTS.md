@@ -30,7 +30,6 @@ This repo is a focused Quarto Book for PyTorch notes. Keep it flexible, runnable
 - Use project-local `uv` and `.venv`.
 - Prefer `uv run ...` for commands.
 - Keep dependencies in `pyproject.toml` and lock with `uv.lock`.
-- The local `src` package is installed through the project, so notebooks should import reusable helpers directly instead of mutating `sys.path`.
 - Do not install packages globally for this repo.
 
 Common commands:
@@ -40,6 +39,14 @@ uv sync
 uv run quarto render
 uv run ruff check .
 ```
+
+## Reusable Python Package
+
+- Keep shared notebook helpers in `src/`.
+- Treat `src/` as this repo's small reusable Python package, installed by `uv sync`.
+- Notebooks should import helpers directly, for example `from src.utils import find_project_root`.
+- Do not mutate `sys.path` inside notebooks unless there is a strong, temporary reason.
+- Promote repeated notebook code into `src/` only when it is genuinely reused or clarifies the notebook.
 
 ## Quarto
 
