@@ -12,6 +12,7 @@ This repo is a focused Quarto Book for PyTorch notes. Keep it flexible, runnable
 
 ## Project Layout
 
+- `contents/basic/` - official tutorial adaptations and first-pass foundational walkthroughs
 - `contents/setup/` - environment, devices, installation, and workflow notes
 - `contents/tensor/` - tensors, shapes, views, broadcasting, autograd basics
 - `contents/data/` - datasets, transforms, DataLoader, splits, sampling
@@ -62,4 +63,3 @@ uv run ruff check .
 - Keep commits atomic: one chapter, workflow, or maintenance concern per commit.
 - Do not commit `.venv/`, `_book/`, raw large datasets, or private/sensitive data.
 - Before reporting success, run the smallest meaningful check, usually `uv run quarto render`.
-

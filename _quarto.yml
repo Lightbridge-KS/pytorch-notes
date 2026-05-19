@@ -9,6 +9,9 @@ book:
   site-url: https://pytorch-notes-lightbridge.netlify.app
   chapters:
     - index.qmd
+    - part: Basic
+      chapters:
+        - contents/basic/quickstart_tutorial.ipynb
     - references.qmd
 
 format:

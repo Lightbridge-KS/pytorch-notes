@@ -7,10 +7,12 @@ requires-python = ">=3.12"
 dependencies = [
     "ipykernel",
     "matplotlib",
+    "nbclient>=0.10.4",
     "nbformat",
     "numpy",
     "pandas",
     "pillow",
+    "pyyaml>=6.0.3",
     "rich",
     "torch",
     "torchvision",

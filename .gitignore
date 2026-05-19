@@ -5,6 +5,7 @@ __pycache__/
 .quarto/
 _book/
 /.ruff_cache/
+artifacts/
 data/raw/
 data/processed/
 data/external/
