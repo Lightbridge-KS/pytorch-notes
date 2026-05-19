@@ -20,6 +20,7 @@ This repo is a focused Quarto Book for PyTorch notes. Keep it flexible, runnable
 - `contents/training/` - loops, checkpointing, metrics, reproducibility, debugging
 - `contents/workflows/` - complete examples with reasonably sized real datasets
 - `contents/recipes/` - practical snippets and focused how-tos
+- `src/` - reusable Python utilities and subpackages for notebooks
 - `data/` - small or documented local datasets for runnable examples
 - `scripts/` - helper scripts for data download, cleanup, or maintenance
 - `assets/images/` - book images and diagrams
@@ -29,6 +30,7 @@ This repo is a focused Quarto Book for PyTorch notes. Keep it flexible, runnable
 - Use project-local `uv` and `.venv`.
 - Prefer `uv run ...` for commands.
 - Keep dependencies in `pyproject.toml` and lock with `uv.lock`.
+- The local `src` package is installed through the project, so notebooks should import reusable helpers directly instead of mutating `sys.path`.
 - Do not install packages globally for this repo.
 
 Common commands:
