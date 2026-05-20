@@ -13,6 +13,12 @@ book:
       chapters:
         - contents/basic/quickstart_tutorial.ipynb
         - contents/basic/tensorqs_tutorial.ipynb
+    - part: SMP
+      chapters: 
+        - text: SMP Library Codebase
+          href: "contents/segmentation/smp-architecture-oop.qmd"
+        - text: SMP Components
+          href: "contents/segmentation/smp-components-explained.qmd"
     - references.qmd
 
 format:

@@ -1,0 +1,177 @@
+---
+title: "SMP Architecture — Component-by-Component"
+---
+
+The diagram captures SMP's core design philosophy: **segmentation = assembling 3 (or 4) Lego blocks**. Let me walk you through each.
+
+## The Big Picture First
+
+```
+                    ┌─────────────────────────────────┐
+                    │  Same pipeline, swappable parts │
+                    └─────────────────────────────────┘
+
+  Image ──▶ [ENCODER] ──▶ [DECODER] ──▶ [SEG HEAD] ──▶ Mask
+              │
+              └─▶ (optional) [CLS HEAD] ──▶ Label
+```
+
+Every model in SMP (`Unet`, `FPN`, `DeepLabV3+`, `Segformer`, ...) is just a different *choice* of which encoder/decoder/head to plug in. The plumbing stays the same.
+
+---
+
+## 1. Encoder (Backbone)
+
+**Job:** *"Look at the image and progressively summarize what's in it."*
+
+The encoder takes your raw image and squeezes it down into compact, abstract feature maps. Spatial resolution shrinks; semantic richness grows.
+
+```
+Input: (B, 3, 512, 512)        ← raw chest X-ray, say
+
+        │  Conv + downsample
+        ▼
+   Stage 1: (B,  64, 256, 256)  ← edges, textures      [shallow]
+        │
+        ▼
+   Stage 2: (B, 128, 128, 128)  ← simple shapes
+        │
+        ▼
+   Stage 3: (B, 256,  64,  64)  ← parts (rib edges, lung borders)
+        │
+        ▼
+   Stage 4: (B, 512,  32,  32)  ← organs / regions
+        │
+        ▼
+   Stage 5: (B,1024,  16,  16)  ← "this is a pneumonia case"   [deep]
+```
+
+Key points:
+- It is usually a **pretrained CNN or ViT** (ResNet, EfficientNet, MiT, ConvNeXt, etc.) — SMP gives you ~500 to choose from via `timm`.
+- It outputs a **list of feature maps at multiple scales**, not just one tensor. The decoder needs all of them.
+- "Backbone" = same thing as encoder, borrowed from classification literature.
+
+---
+
+## 2. Decoder
+
+**Job:** *"Take those compressed features and rebuild a full-resolution map, while keeping the semantic information."*
+
+This is the symmetric counterpart of the encoder — it upsamples back toward the input resolution and **fuses features from multiple encoder stages** so the output is both *semantically accurate* (from deep features) and *spatially precise* (from shallow features).
+
+```
+                    Deep semantic info (what)
+                          ▲
+                          │
+Stage 5 ─────────┐        │
+                 ▼        │        Upsample
+              [fuse] ─────┼───────▶ + refine ──┐
+Stage 4 ─────────┘        │                    │
+                          │                    ▼
+                          │             upsample + fuse ──┐
+Stage 3 ──────────────────┼───────────────▶               │
+                          │                                ▼
+                          │                       ... and so on ...
+                          │
+                          ▼
+                    Spatial detail (where)
+                          ▲
+                          │
+                       (shallow features)
+```
+
+Different decoders fuse differently — and *that's* what distinguishes the model families:
+
+| Decoder | Fusion idea |
+|---|---|
+| **U-Net** | Concatenate encoder stage with upsampled decoder feature (skip connections) |
+| **FPN** | Top-down pathway + lateral 1×1 convs, sum features at each level |
+| **DeepLabV3+** | Atrous (dilated) convs + ASPP module for multi-scale context |
+| **PAN / LinkNet** | Variants of the above with different attention/aggregation tricks |
+
+Output of decoder: typically `(B, decoder_channels, H, W)` — same spatial size as the input, but channels are arbitrary (often 16–64).
+
+---
+
+## 3. Segmentation Head
+
+**Job:** *"Project the decoder's feature channels onto the actual class space."*
+
+It is almost always a **1×1 convolution** (plus optional upsampling/activation). Tiny, but essential.
+
+```
+Decoder output:  (B, 16,  512, 512)
+                       │
+                       ▼  Conv2d(16 → num_classes, kernel_size=1)
+                       │
+Segmentation mask: (B, C,  512, 512)
+                          ▲
+                          │
+                  e.g. C=2 for {background, lung nodule}
+                       C=4 for {bg, GGO, consolidation, effusion}
+```
+
+For binary segmentation (`num_classes=1`) → apply `sigmoid`, threshold at 0.5.
+For multi-class → apply `softmax` across the channel axis, take `argmax`.
+
+Note: SMP applies activations during inference but **not** during training — that's why losses like `DiceLoss(from_logits=True)` exist.
+
+---
+
+## 4. Classification Head (Optional, Auxiliary)
+
+**Job:** *"Use the deepest encoder features to also predict an image-level label."*
+
+This is a side branch that **does not feed back into the segmentation output**. It exists for **multi-task learning** — a very useful trick in radiology.
+
+```
+Stage 5 features: (B, 1024, 16, 16)
+        │
+        ▼  Global Average Pool
+        │
+       (B, 1024)
+        │
+        ▼  Linear(1024 → num_classes)
+        │
+   Image label: (B, C)   e.g. "pneumonia present: yes/no"
+```
+
+Why bother?
+
+- **Regularization** — the encoder is forced to learn features useful for *both* tasks, often improving segmentation generalization.
+- **Practical product** — your model outputs both *"is there a nodule?"* and *"where is it?"* in one forward pass.
+- **Weak supervision** — if you have many images with image-level labels but few with masks, the classification head can still learn from them.
+
+In SMP you enable it by passing `aux_params=dict(classes=N, ...)` to the model constructor.
+
+---
+
+## Putting It All Together (Code Preview)
+
+```python
+import segmentation_models_pytorch as smp
+
+model = smp.Unet(
+    encoder_name="resnet34",        # ← block 1: backbone
+    encoder_weights="imagenet",     #   pretrained
+    in_channels=1,                  #   grayscale CT/X-ray
+    classes=2,                      # ← block 3: seg head outputs
+    aux_params=dict(                # ← block 4: optional cls head
+        classes=2, pooling="avg", dropout=0.3
+    ),
+)
+# Decoder (block 2) is fixed by the chosen model family — here, U-Net.
+
+masks, labels = model(image_tensor)  # both outputs returned
+```
+
+---
+
+## Mental Model to Keep
+
+```
+ENCODER  =  "compress + understand"   (spatial ↓, semantic ↑)
+DECODER  =  "expand + localize"       (spatial ↑, fuse multi-scale)
+SEG HEAD =  "project to classes"      (1×1 conv)
+CLS HEAD =  "bonus image-level task"  (pool + linear)
+```
